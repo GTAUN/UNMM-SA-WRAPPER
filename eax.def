@@ -1,0 +1,9 @@
+LIBRARY eax.dll
+EXPORTS
+	DllCanUnloadNow=DllCanUnloadNow_wrapper PRIVATE
+	DllGetClassObject=DllGetClassObject_wrapper PRIVATE
+	DllRegisterServer=DllRegisterServer_wrapper PRIVATE
+	DllUnregisterServer=DllUnregisterServer_wrapper PRIVATE
+	EAXDirectSoundCreate=EAXDirectSoundCreate_wrapper @5
+	EAXDirectSoundCreate8=EAXDirectSoundCreate8_wrapper @6
+	GetCurrentVersion=GetCurrentVersion_wrapper @7
