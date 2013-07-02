@@ -1,5 +1,4 @@
-GTAUN Mod Manager: SA
-DLL Wrapper
+GTAUN Mod Manager: SA: DLL Wrapper
 ===============
 
 Requires
