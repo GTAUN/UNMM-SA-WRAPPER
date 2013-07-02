@@ -1,6 +1,7 @@
-GTAUN Mod Manager: SA: DLL Wrapper
+GTAUN Mod Manager: SA
+DLL Wrapper
 ===============
 
 Requires
 -----------------
-* 'Boost 1.54.0'
+* `Boost 1.54.0`
