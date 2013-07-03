@@ -23,6 +23,7 @@
 
 #include <subhook.h>
 #include <gtaun/unmm/CoveringMapManager.hpp>
+#include <gtaun/unmm/archive/imgv2/ImgV2.hpp>
 
 using namespace std;
 

@@ -10,6 +10,9 @@
     <Filter Include="gtaun::unmm">
       <UniqueIdentifier>{8f258d37-0d36-4322-9460-c5bccf27a3bd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="gtaun::unmm::archive::imgv2">
+      <UniqueIdentifier>{9522d1d4-5e50-472b-ba2f-4d79f99368bf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="gtaun\unmm\sa\EaxWrapper.cpp">
@@ -28,6 +31,15 @@
     </ClInclude>
     <ClInclude Include="gtaun\unmm\CoveringMapManager.hpp">
       <Filter>gtaun::unmm</Filter>
+    </ClInclude>
+    <ClInclude Include="gtaun\unmm\archive\imgv2\ImgV2.hpp">
+      <Filter>gtaun::unmm::archive::imgv2</Filter>
+    </ClInclude>
+    <ClInclude Include="gtaun\unmm\archive\imgv2\ImgEntry.hpp">
+      <Filter>gtaun::unmm::archive::imgv2</Filter>
+    </ClInclude>
+    <ClInclude Include="gtaun\unmm\archive\imgv2\ImgHeader.hpp">
+      <Filter>gtaun::unmm::archive::imgv2</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
