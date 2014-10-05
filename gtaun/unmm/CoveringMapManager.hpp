@@ -35,7 +35,7 @@ private:
 	typedef bg::model::box<point_type> range_type;
 	typedef std::pair<range_type, CoveringDataEntry*> rtree_value_type;
 	typedef bgi::rtree<rtree_value_type, bgi::quadratic<16>> rtree_type;
-	typedef boost::function<void(void*, size_t, size_t)> read_func_type;
+	typedef std::function<void(void*, size_t, size_t)> read_func_type;
 
 public:
 	class CoveringDataEntry
@@ -73,7 +73,7 @@ public:
 
 		inline range_type getRange() const
 		{
-			return range_type(offset, getEnd());
+			return range_type(point_type(offset), point_type(getEnd()));
 		}
 	};
 
@@ -131,7 +131,7 @@ public:
 
 		inline range_type getRange() const
 		{
-			return range_type(offset, getEnd());
+			return range_type(point_type(offset), point_type(getEnd()));
 		}
 	};
 
@@ -140,13 +140,13 @@ private:
 	class out_iterator
 	{
 	private:
-		boost::function<void(const ValueType&)> &out;
+		std::function<void(const ValueType&)> &out;
 
 	public:
 		typedef out_iterator _Myt;
 		typedef ValueType _Valty;
 
-		explicit out_iterator(boost::function<void(const ValueType&)> &out) : out(out)
+		explicit out_iterator(std::function<void(const ValueType&)> &out) : out(out)
 		{
 		}
 
@@ -186,11 +186,11 @@ public:
 		return entry;
 	}
 
-	inline void query(size_t offset, size_t size, boost::function<void(CoveringDataEntry*)> out) const
+	inline void query(size_t offset, size_t size, std::function<void(CoveringDataEntry*)> out) const
 	{
 		size_t end = offset + size - 1;
-		range_type range(offset, end);
-		query(bgi::intersects(range), [&] (const rtree_value_type& v) { out(v.second); });
+		auto range = range_type(point_type(offset), point_type(end));
+		query(bgi::intersects(range), [&](const rtree_value_type& v) { out(v.second); });
 	}
 
 	std::vector<CoveringDataEntry*> querySorted(size_t offset, size_t size) const
@@ -222,10 +222,10 @@ public:
 		std::vector<CoveringDataEntry*> entries = querySorted(offset, size);
 		for (auto& entry : entries)
 		{
-			range_type range(max(start, entry->offset), min(end, entry->offset + entry->size - 1));
+			range_type range(point_type(max(start, entry->offset)), point_type(min(end, entry->offset + entry->size - 1)));
 
 			std::vector<value_type> queriedCoveredBlocks;
-			boost::function<void(const value_type&)> func = [&] (const value_type& v)
+			std::function<void(const value_type&)> func = [&] (const value_type& v)
 			{
 				queriedCoveredBlocks.push_back(const_cast<value_type&>(v));
 			};
@@ -245,12 +245,12 @@ public:
 
 				if (entryStart > coveredBlockStart)
 				{
-					range_type newCoveredRange(coveredBlockStart, entryStart - 1);
+					range_type newCoveredRange(point_type(coveredBlockStart), point_type(entryStart - 1));
 					coveredBlocks.insert(std::make_pair(newCoveredRange, ReadSequence(coveredBlockData, newCoveredRange)));
 				}
 				if (entryEnd < coveredBlockEnd)
 				{
-					range_type newCoveredRange(entryEnd + 1, coveredBlockEnd);
+					range_type newCoveredRange(point_type(entryEnd + 1), point_type(coveredBlockEnd));
 					coveredBlocks.insert(std::make_pair(newCoveredRange, ReadSequence(coveredBlockData, newCoveredRange)));
 				}
 
@@ -261,7 +261,7 @@ public:
 		}
 
 		std::vector<ReadSequence> readSequences;
-		boost::function<void(const value_type&)> func = [&] (const value_type& v)
+		std::function<void(const value_type&)> func = [&] (const value_type& v)
 		{
 			readSequences.push_back(v.second);
 		};
@@ -295,7 +295,7 @@ private:
 	CoveringMapManager& operator=(const CoveringMapManager&);
 	
 	template<typename Predicates>
-	inline void query(Predicates &predicates, boost::function<void(const rtree_value_type&)> out) const
+	inline void query(Predicates const &predicates, std::function<void(const rtree_value_type&)> out) const
 	{
 		tree.query(predicates, out_iterator<rtree_value_type>(out));
 	}
@@ -305,7 +305,7 @@ private:
 		if (orderCount < 0) return;
 
 		size_t end = entry->offset + entry->size - 1;
-		range_type range(entry->offset, end);
+		range_type range(point_type(entry->offset), point_type(end));
 		query(bgi::covered_by(range), [&] (const rtree_value_type& v) { if (v.second == entry) tree.remove(v); } );
 	}
 };
