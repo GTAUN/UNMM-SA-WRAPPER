@@ -41,5 +41,8 @@
     <ClInclude Include="gtaun\unmm\archive\imgv2\ImgHeader.hpp">
       <Filter>gtaun::unmm::archive::imgv2</Filter>
     </ClInclude>
+    <ClInclude Include="gtaun\unmm\archive\imgv2\ImgReader.hpp">
+      <Filter>gtaun::unmm::archive::imgv2</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

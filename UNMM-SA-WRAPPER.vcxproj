@@ -95,6 +95,7 @@
   <ItemGroup>
     <ClInclude Include="gtaun\unmm\archive\imgv2\ImgEntry.hpp" />
     <ClInclude Include="gtaun\unmm\archive\imgv2\ImgHeader.hpp" />
+    <ClInclude Include="gtaun\unmm\archive\imgv2\ImgReader.hpp" />
     <ClInclude Include="gtaun\unmm\archive\imgv2\ImgV2.hpp" />
     <ClInclude Include="gtaun\unmm\CoveringMapManager.hpp" />
     <ClInclude Include="subhook\subhook.h" />

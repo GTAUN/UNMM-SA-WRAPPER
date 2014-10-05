@@ -1,0 +1,123 @@
+/**
+* Copyright (C) 2014 Shindo
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 2 as
+* published by the Free Software Foundation.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*/
+
+#ifndef GTAUN_UNMM_ARCHIVE_IMGV2_IMGREADER_HPP
+#define GTAUN_UNMM_ARCHIVE_IMGV2_IMGREADER_HPP
+
+#include <stdint.h>
+#include <memory.h>
+#include <fstream>
+#include <string>
+#include <vector>
+
+namespace gtaun {
+namespace unmm {
+namespace archive {
+namespace imgv2 {
+
+class ImgReader {
+public:
+	static const int success = 0;
+	static const int fail = 1;
+
+	ImgReader() : state(fail)
+	{
+	}
+
+	ImgReader(std::string fileName) : fileName(fileName), state(fail)
+	{
+		open();
+	}
+
+	~ImgReader() 
+	{
+		if (stream.is_open()) stream.close();
+	}
+
+	int open()
+	{
+		if (stream.is_open() || fileName.empty()) return;
+
+		stream.open(fileName, std::ios::in | std::ios::binary);
+		if (!stream.is_open()) return;
+
+		stream.seekg(0, std::ios::end);
+		if (stream.tellg() < 4)
+		{
+			stream.close();
+			return;
+		}
+
+		stream.seekg(0, std::ios::beg);
+		stream.read(header.version, 4);
+		if (!header.checkVersion())
+		{
+			stream.close();
+			return;
+		}
+
+		stream.read((char*)&header.fileEntries, sizeof(uint32_t));
+		for (uint32_t i = 0; i < header.fileEntries; i++)
+		{
+			ImgEntry entry;
+			stream.read((char*)&entry.offset, sizeof(uint32_t));
+			stream.read((char*)&entry.size, sizeof(uint32_t));
+			stream.read(entry.name, 24);
+			entries.push_back(entry);
+		}
+
+		state = success;
+	}
+
+	void read(uint32_t offsetBytes, uint32_t sizeBytes, void* buf)
+	{
+		stream.seekg(offsetBytes);
+		stream.read((char*)buf, sizeBytes);
+	}
+
+	void read(uint32_t id, void* buf)
+	{
+		if (id >= entries.size()) return;
+		read(entries[id].getOffsetBytes, entries[id].getSizeBytes, buf);
+	}
+
+	bool isOpen()
+	{
+		return state == success && stream.is_open();
+	}
+
+	bool checkVersion() 
+	{ 
+		if (!isOpen()) return false;
+		else return header.checkVersion();
+	}
+
+	operator bool()
+	{
+		return isOpen();
+	}
+
+private:
+	ImgHeader header;
+	std::ifstream stream;
+	std::string fileName;
+	std::vector<ImgEntry> entries;
+	int state;
+};
+
+} // namespace imgv2
+} // namespace archive
+} // namespace unmm
+} // namespace gtaun
+
+#endif // GTAUN_UNMM_ARCHIVE_IMGV2_IMGREADER_HPP

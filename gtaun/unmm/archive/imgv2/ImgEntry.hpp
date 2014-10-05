@@ -27,10 +27,13 @@ struct ImgEntry
 
 
 	uint32_t offset;
-	uint16_t sizeSecond;
-	uint16_t size;
+	uint32_t size;
 	char name[24];
 
+	uint32_t getOffsetBytes() 
+	{
+		return offset * BLOCK_SIZE;
+	}
 
 	uint32_t getSizeBytes()
 	{
