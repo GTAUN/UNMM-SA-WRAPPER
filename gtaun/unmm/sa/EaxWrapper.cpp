@@ -25,8 +25,9 @@
 #include <gtaun/unmm/CoveringMapManager.hpp>
 #include <gtaun/unmm/archive/imgv2/ImgV2.hpp>
 
+namespace imgv2 = gtaun::unmm::archive::imgv2;
+	
 using namespace std;
-
 
 #define ORIGINAL_LIB_FILENAME "original_eax.dll"
 #define KERNEL32_LIB_FILENAME "Kernel32.dll"

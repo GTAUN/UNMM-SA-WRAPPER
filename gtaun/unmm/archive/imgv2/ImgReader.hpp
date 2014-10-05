@@ -34,9 +34,9 @@ public:
 	{
 	}
 
-	ImgReader(std::string fileName) : fileName(fileName), state(fail)
+	ImgReader(std::string fileName) : state(fail)
 	{
-		open();
+		open(fileName);
 	}
 
 	~ImgReader() 
@@ -44,21 +44,13 @@ public:
 		if (stream.is_open()) stream.close();
 	}
 
-	int open()
+	void open(std::string fileName)
 	{
 		if (stream.is_open() || fileName.empty()) return;
 
 		stream.open(fileName, std::ios::in | std::ios::binary);
 		if (!stream.is_open()) return;
 
-		stream.seekg(0, std::ios::end);
-		if (stream.tellg() < 4)
-		{
-			stream.close();
-			return;
-		}
-
-		stream.seekg(0, std::ios::beg);
 		stream.read(header.version, 4);
 		if (!header.checkVersion())
 		{
@@ -88,7 +80,7 @@ public:
 	void read(uint32_t id, void* buf)
 	{
 		if (id >= entries.size()) return;
-		read(entries[id].getOffsetBytes, entries[id].getSizeBytes, buf);
+		read(entries[id].getOffsetBytes(), entries[id].getSizeBytes(), buf);
 	}
 
 	bool isOpen()
@@ -110,7 +102,6 @@ public:
 private:
 	ImgHeader header;
 	std::ifstream stream;
-	std::string fileName;
 	std::vector<ImgEntry> entries;
 	int state;
 };
