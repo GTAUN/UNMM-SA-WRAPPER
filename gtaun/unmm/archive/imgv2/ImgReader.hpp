@@ -76,12 +76,6 @@ public:
 		stream.read((char*)buf, sizeBytes);
 	}
 
-	void read(uint32_t id, void* buf)
-	{
-		if (id >= entries.size()) return;
-		read(entries[id].getOffsetBytes(), entries[id].getSizeBytes(), buf);
-	}
-
 	std::vector<ImgEntry> getEntries()
 	{
 		if (!isOpen()) return std::vector<ImgEntry>();
