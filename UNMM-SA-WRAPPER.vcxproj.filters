@@ -44,5 +44,14 @@
     <ClInclude Include="gtaun\unmm\archive\imgv2\ImgReader.hpp">
       <Filter>gtaun::unmm::archive::imgv2</Filter>
     </ClInclude>
+    <ClInclude Include="gtaun\unmm\Utils.hpp">
+      <Filter>gtaun::unmm</Filter>
+    </ClInclude>
+    <ClInclude Include="gtaun\unmm\sa\FileProcesser.hpp">
+      <Filter>gtaun::unmm::sa</Filter>
+    </ClInclude>
+    <ClInclude Include="gtaun\unmm\archive\imgv2\ImgGenerator.hpp">
+      <Filter>gtaun::unmm::archive::imgv2</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

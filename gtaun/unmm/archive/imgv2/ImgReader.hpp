@@ -15,7 +15,6 @@
 #define GTAUN_UNMM_ARCHIVE_IMGV2_IMGREADER_HPP
 
 #include <stdint.h>
-#include <memory.h>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -34,9 +33,9 @@ public:
 	{
 	}
 
-	ImgReader(std::string fileName) : state(fail)
+	ImgReader(std::string filePath) : state(fail)
 	{
-		open(fileName);
+		open(filePath);
 	}
 
 	~ImgReader() 
@@ -44,14 +43,14 @@ public:
 		if (stream.is_open()) stream.close();
 	}
 
-	void open(std::string fileName)
+	void open(std::string filePath)
 	{
-		if (stream.is_open() || fileName.empty()) return;
+		if (stream.is_open() || filePath.empty()) return;
 
-		stream.open(fileName, std::ios::in | std::ios::binary);
+		stream.open(filePath, std::ios::in | std::ios::binary);
 		if (!stream.is_open()) return;
 
-		stream.read(header.version, 4);
+		stream.read(header.version, sizeof(header.version));
 		if (!header.checkVersion())
 		{
 			stream.close();
@@ -102,7 +101,7 @@ public:
 
 	operator bool()
 	{
-		return isOpen();
+		return checkVersion();
 	}
 
 private:

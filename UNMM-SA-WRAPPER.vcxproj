@@ -94,10 +94,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="gtaun\unmm\archive\imgv2\ImgEntry.hpp" />
+    <ClInclude Include="gtaun\unmm\archive\imgv2\ImgGenerator.hpp" />
     <ClInclude Include="gtaun\unmm\archive\imgv2\ImgHeader.hpp" />
     <ClInclude Include="gtaun\unmm\archive\imgv2\ImgReader.hpp" />
     <ClInclude Include="gtaun\unmm\archive\imgv2\ImgV2.hpp" />
     <ClInclude Include="gtaun\unmm\CoveringMapManager.hpp" />
+    <ClInclude Include="gtaun\unmm\sa\FileProcesser.hpp" />
+    <ClInclude Include="gtaun\unmm\Utils.hpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="subhook\subhook.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

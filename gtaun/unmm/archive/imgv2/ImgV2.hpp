@@ -24,6 +24,9 @@
  * GNU General Public License for more details.
  */
 
+#define IMG_FILE_EXTENSTION ".img"
+
 #include <gtaun/unmm/archive/imgv2/ImgHeader.hpp>
 #include <gtaun/unmm/archive/imgv2/ImgEntry.hpp>
 #include <gtaun/unmm/archive/imgv2/ImgReader.hpp>
+#include <gtaun/unmm/archive/imgv2/FakeImgGenerator.hpp>

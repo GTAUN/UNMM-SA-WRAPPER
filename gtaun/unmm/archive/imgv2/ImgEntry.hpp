@@ -24,6 +24,7 @@ namespace imgv2 {
 struct ImgEntry
 {
 	static const uint32_t BLOCK_SIZE = 2048;
+	static const uint32_t ENTRY_SIZE = 32; // exclude fakeOffset
 
 
 	uint32_t offset;
@@ -39,6 +40,9 @@ struct ImgEntry
 	{
 		return size * BLOCK_SIZE;
 	}
+
+	// for FakeImgGenerator
+	uint32_t fakeOffset;
 };
 
 } // namespace imgv2

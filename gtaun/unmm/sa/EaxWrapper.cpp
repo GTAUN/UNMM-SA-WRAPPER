@@ -22,10 +22,14 @@
 #include <fstream>
 
 #include <subhook.h>
+#include <gtaun/unmm/Utils.hpp>
 #include <gtaun/unmm/CoveringMapManager.hpp>
 #include <gtaun/unmm/archive/imgv2/ImgV2.hpp>
+#include <gtaun/unmm/sa/FileProcesser.hpp>
 
+namespace unmm = gtaun::unmm;
 namespace imgv2 = gtaun::unmm::archive::imgv2;
+namespace sa = gtaun::unmm::sa;
 	
 using namespace std;
 
@@ -59,6 +63,8 @@ UINT_PTR procAddresses[7] = {0};
 SubHook createFileHook, closeHandleHook, readFileHook, readFileExHook, setFilePointerHook, createFileMappingHook;
 
 unordered_map<HANDLE, string> openedFilenames;
+unordered_map<HANDLE, DWORD> currentOffset;
+unordered_map<HANDLE, imgv2::FakeImgGenerator> imgGenerators;
 
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
@@ -123,11 +129,36 @@ HANDLE WINAPI HookedCreateFileA
 {
 	SCOPE_REMOVE_HOOKES;
 
-	HANDLE ret = CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+	HANDLE ret;
+
+	sa::FileProcesser processor(lpFileName);
+	if (processor.coveredBy() == sa::FileProcesser::none)
+		ret = CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+	else
+	{
+		if (processor.coveredBy() == sa::FileProcesser::file)
+			ret = CreateFileA(processor.getCoveredPath().c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+		else // covered by dir
+		{
+			if (processor.getExtension() != IMG_FILE_EXTENSTION)
+				ret = CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+			else
+			{
+				ret = CreateFileA(lpFileName, dwDesiredAccess, FILE_SHARE_READ, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+
+				if (ret != INVALID_HANDLE_VALUE)
+				{
+					imgGenerators[ret] = imgv2::FakeImgGenerator(lpFileName, processor.getCoveredPath());
+					assert(imgGenerators[ret].generate() == imgv2::FakeImgGenerator::success);
+				}
+			}
+		}
+	}
 
 	if (ret != INVALID_HANDLE_VALUE)
 	{
 		openedFilenames[ret] = lpFileName;
+		currentOffset[ret] = 0;
 	}
 
 	ofstream logFile(UNMM_LOG_FILENAME, ios::out | ios::app | ios::ate);
@@ -169,6 +200,15 @@ BOOL WINAPI HookedReadFile
 {
 	SCOPE_REMOVE_HOOKES;
 
+	auto it = imgGenerators.find(hFile);
+	if (it != imgGenerators.end())
+	{
+		unmm::CoveringMapManager& manager = it->second.getMapManager();
+		manager.read(lpBuffer, currentOffset[hFile], nNumberOfBytesToRead);
+		currentOffset[hFile] += nNumberOfBytesToRead;
+		return TRUE;
+	}
+
 	ofstream logFile(UNMM_LOG_FILENAME, ios::out | ios::app | ios::ate);
 	if (logFile)
 	{
@@ -195,6 +235,15 @@ BOOL WINAPI HookedReadFileEx
 {
 	SCOPE_REMOVE_HOOKES;
 
+	auto it = imgGenerators.find(hFile);
+	if (it != imgGenerators.end())
+	{
+		unmm::CoveringMapManager& manager = it->second.getMapManager();
+		manager.read(lpBuffer, currentOffset[hFile], nNumberOfBytesToRead);
+		currentOffset[hFile] += nNumberOfBytesToRead;
+		return TRUE;
+	}
+
 	ofstream logFile(UNMM_LOG_FILENAME, ios::out | ios::app | ios::ate);
 	if (logFile)
 	{
@@ -220,6 +269,27 @@ DWORD WINAPI HookedSetFilePointer
 (HANDLE hFile, LONG lDistanceToMove, PLONG lpDistanceToMoveHigh, DWORD dwMoveMethod)
 {
 	SCOPE_REMOVE_HOOKES;
+
+	auto it = imgGenerators.find(hFile);
+	if (it != imgGenerators.end())
+	{
+		switch (dwMoveMethod)
+		{
+		case FILE_BEGIN:
+			currentOffset[hFile] = 0;
+			break;
+
+		case FILE_CURRENT:
+			break;
+
+		case FILE_END:
+			currentOffset[hFile] = it->second.getSizeBytes();
+			break;
+		}
+
+		currentOffset[hFile] += lDistanceToMove;
+		return currentOffset[hFile];
+	}
 
 	ofstream logFile(UNMM_LOG_FILENAME, ios::out | ios::app | ios::ate);
 	if (logFile)

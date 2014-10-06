@@ -279,7 +279,7 @@ public:
 		return readSequences;
 	}
 
-	std::vector<ReadSequence> read(void* buffer, size_t offset, size_t size) const
+	void read(void* buffer, size_t offset, size_t size) const
 	{
 		auto sequences = generateReadSequences(offset, size);
 		for (ReadSequence& seq : sequences)
