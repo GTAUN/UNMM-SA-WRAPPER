@@ -99,11 +99,6 @@ public:
 		else return header.checkVersion();
 	}
 
-	operator bool()
-	{
-		return checkVersion();
-	}
-
 private:
 	ImgHeader header;
 	std::ifstream stream;

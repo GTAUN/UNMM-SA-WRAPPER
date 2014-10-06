@@ -50,7 +50,7 @@
     <ClInclude Include="gtaun\unmm\sa\FileProcesser.hpp">
       <Filter>gtaun::unmm::sa</Filter>
     </ClInclude>
-    <ClInclude Include="gtaun\unmm\archive\imgv2\ImgGenerator.hpp">
+    <ClInclude Include="gtaun\unmm\archive\imgv2\FakeImgGenerator.hpp">
       <Filter>gtaun::unmm::archive::imgv2</Filter>
     </ClInclude>
   </ItemGroup>

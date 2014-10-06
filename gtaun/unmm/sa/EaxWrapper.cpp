@@ -203,8 +203,8 @@ BOOL WINAPI HookedReadFile
 	auto it = imgGenerators.find(hFile);
 	if (it != imgGenerators.end())
 	{
-		unmm::CoveringMapManager& manager = it->second.getMapManager();
-		manager.read(lpBuffer, currentOffset[hFile], nNumberOfBytesToRead);
+		auto manager = it->second.getMapManager();
+		manager->read(lpBuffer, currentOffset[hFile], nNumberOfBytesToRead);
 		currentOffset[hFile] += nNumberOfBytesToRead;
 		return TRUE;
 	}
@@ -238,8 +238,8 @@ BOOL WINAPI HookedReadFileEx
 	auto it = imgGenerators.find(hFile);
 	if (it != imgGenerators.end())
 	{
-		unmm::CoveringMapManager& manager = it->second.getMapManager();
-		manager.read(lpBuffer, currentOffset[hFile], nNumberOfBytesToRead);
+		auto manager = it->second.getMapManager();
+		manager->read(lpBuffer, currentOffset[hFile], nNumberOfBytesToRead);
 		currentOffset[hFile] += nNumberOfBytesToRead;
 		return TRUE;
 	}
