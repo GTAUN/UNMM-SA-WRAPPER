@@ -83,6 +83,12 @@ public:
 		read(entries[id].getOffsetBytes(), entries[id].getSizeBytes(), buf);
 	}
 
+	std::vector<ImgEntry> getEntries()
+	{
+		if (!isOpen()) return std::vector<ImgEntry>();
+		else return entries;
+	}
+
 	bool isOpen()
 	{
 		return state == success && stream.is_open();
