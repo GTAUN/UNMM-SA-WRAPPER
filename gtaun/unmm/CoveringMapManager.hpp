@@ -282,13 +282,20 @@ public:
 
 	void read(void* buffer, size_t offset, size_t size) const
 	{
+		std::vector<byte> ret;
+
 		auto sequences = generateReadSequences(offset, size);
 		for (ReadSequence& seq : sequences)
 		{
 			auto entry = seq.dataEntry;
 			size_t sourceOffset = seq.getOffset() - entry->offset;
-			entry->readFunc(buffer, sourceOffset, seq.getSize(), entry->param);
+
+			std::vector<byte> data(seq.getSize(), 0);
+			entry->readFunc(&data[0], sourceOffset, seq.getSize(), entry->param);
+			ret.insert(ret.end(), data.begin(), data.end());
 		}
+
+		memcpy(buffer, &ret[0], size);
 	}
 
 private:

@@ -151,8 +151,11 @@ HANDLE WINAPI HookedCreateFileA
 				{
 					currentOffset[ret] = 0;
 
-					imgGenerators[lpFileName] = imgv2::FakeImgGenerator(lpFileName, processor.getCoveredPath());
-					assert(imgGenerators[lpFileName].generate() == imgv2::FakeImgGenerator::success);
+					if (imgGenerators.find(lpFileName) == imgGenerators.end()) // only generate once
+					{
+						imgGenerators[lpFileName] = imgv2::FakeImgGenerator(lpFileName, processor.getCoveredPath());
+						assert(imgGenerators[lpFileName].generate() == imgv2::FakeImgGenerator::success);
+					}
 				}
 			}
 		}
@@ -209,21 +212,6 @@ BOOL WINAPI HookedReadFile
 	SCOPE_REMOVE_HOOKES;
 
 	ofstream logFile(UNMM_LOG_FILENAME, ios::out | ios::app | ios::ate);
-
-	auto it = imgGenerators.find(openedFilenames[hFile]);
-	if (it != imgGenerators.end())
-	{
-		if (logFile)
-			logFile << "manager->read(" << lpBuffer << ", " << currentOffset[hFile] << "," << nNumberOfBytesToRead << ");" << endl;
-
-		auto manager = it->second.getMapManager();
-		manager->read(lpBuffer, currentOffset[hFile], nNumberOfBytesToRead);
-		currentOffset[hFile] += nNumberOfBytesToRead;
-
-		if (lpNumberOfBytesRead) *lpNumberOfBytesRead = nNumberOfBytesToRead;
-		return TRUE;
-	}
-
 	if (logFile)
 	{
 		auto it = openedFilenames.find(hFile);
@@ -241,8 +229,31 @@ BOOL WINAPI HookedReadFile
 		if (coveredFiles.find(hFile) != coveredFiles.end())
 			logFile << "This file is covered." << endl;
 
-		logFile.close();
+		if (lpOverlapped)
+			logFile << "lpOverlapped->Offset = " << lpOverlapped->Offset << ", hEvent = " << lpOverlapped->hEvent << endl;
 	}
+
+	auto it = imgGenerators.find(openedFilenames[hFile]);
+	if (it != imgGenerators.end())
+	{
+		if (logFile)
+			logFile << "manager->read(" << lpBuffer << ", " << currentOffset[hFile] << "," << nNumberOfBytesToRead << ");" << endl;
+
+		auto manager = it->second.getMapManager();
+		if (!lpOverlapped) manager->read(lpBuffer, currentOffset[hFile], nNumberOfBytesToRead);
+		else
+		{
+			manager->read(lpBuffer, lpOverlapped->Offset, nNumberOfBytesToRead);
+			currentOffset[hFile] = lpOverlapped->Offset + nNumberOfBytesToRead;
+			lpOverlapped->Internal = ERROR_SUCCESS;
+		}
+
+		if (lpNumberOfBytesRead) *lpNumberOfBytesRead = nNumberOfBytesToRead;
+		return TRUE;
+	}
+
+	if (logFile)
+		logFile.close();
 
 	return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
 }
