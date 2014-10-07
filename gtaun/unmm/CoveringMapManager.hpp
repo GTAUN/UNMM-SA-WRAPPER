@@ -35,7 +35,7 @@ private:
 	typedef bg::model::box<point_type> range_type;
 	typedef std::pair<range_type, CoveringDataEntry*> rtree_value_type;
 	typedef bgi::rtree<rtree_value_type, bgi::quadratic<16>> rtree_type;
-	typedef std::function<void(void*, size_t, size_t)> read_func_type;
+	typedef std::function<void(void*, size_t, size_t, UINT_PTR)> read_func_type;
 
 public:
 	class CoveringDataEntry
@@ -45,19 +45,20 @@ public:
 		const size_t offset;
 		const size_t size;
 		const read_func_type readFunc;
+		const UINT_PTR param;
 
 	private:
 		CoveringMapManager* manager;
 
 	public:
-		CoveringDataEntry(CoveringMapManager* manager, size_t order, size_t offset, size_t size, read_func_type func) :
-			manager(manager), order(order), offset(offset), size(size), readFunc(func)
+		CoveringDataEntry(CoveringMapManager* manager, size_t order, size_t offset, size_t size, read_func_type func, UINT_PTR param) :
+			manager(manager), order(order), offset(offset), size(size), readFunc(func), param(param)
 		{
 		}
 
-		CoveringDataEntry(CoveringMapManager* manager, size_t order, const range_type& range, read_func_type func) :
+		CoveringDataEntry(CoveringMapManager* manager, size_t order, const range_type& range, read_func_type func, UINT_PTR param) :
 			manager(manager), order(order), offset(range.min_corner().get<0>()),
-			size(range.max_corner().get<0>() - offset + 1), readFunc(func)
+			size(range.max_corner().get<0>() - offset + 1), readFunc(func), param(param)
 		{
 		}
 
@@ -174,12 +175,12 @@ public:
 	~CoveringMapManager()
 	{
 		orderCount = -1;
-		query(bgi::covered_by(tree.bounds()), [&] (const rtree_value_type& v) { delete v.second; });
+		//query(bgi::covered_by(tree.bounds()), [&] (const rtree_value_type& v) { delete v.second; });
 	}
 
-	CoveringDataEntry* registerCoveringBlock(size_t offset, size_t size, read_func_type readFunc)
+	CoveringDataEntry* registerCoveringBlock(size_t offset, size_t size, read_func_type readFunc, UINT_PTR param = -1)
 	{
-		CoveringDataEntry* entry = new CoveringDataEntry(this, orderCount, offset, size, readFunc);
+		CoveringDataEntry* entry = new CoveringDataEntry(this, orderCount, offset, size, readFunc, param);
 		tree.insert(std::make_pair(entry->getRange(), entry));
 
 		orderCount++;
@@ -286,7 +287,7 @@ public:
 		{
 			auto entry = seq.dataEntry;
 			size_t sourceOffset = seq.getOffset() - entry->offset;
-			entry->readFunc(buffer, sourceOffset, seq.getSize());
+			entry->readFunc(buffer, sourceOffset, seq.getSize(), entry->param);
 		}
 	}
 

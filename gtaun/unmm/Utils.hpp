@@ -25,6 +25,19 @@ bool endWith(const std::string& s, const std::string& tail)
 	return !s.compare(s.size() - tail.size(), tail.size(), tail);
 }
 
+bool startWith(const std::string& s, const std::string& head)
+{
+	return !s.compare(0, head.size(), head);
+}
+
+std::string toLower(std::string &s)
+{
+	std::string ret = s;
+	for (auto& c : ret)
+		c = tolower(c);
+	return ret;
+}
+
 std::string& trim(std::string &s)
 {
 	if (s.find_first_not_of(' ') != std::string::npos)

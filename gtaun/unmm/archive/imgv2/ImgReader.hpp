@@ -60,7 +60,7 @@ public:
 		stream.read((char*)&header.fileEntries, sizeof(uint32_t));
 		for (uint32_t i = 0; i < header.fileEntries; i++)
 		{
-			ImgEntry entry;
+			ImgEntry entry = { 0 };
 			stream.read((char*)&entry.offset, sizeof(uint32_t));
 			stream.read((char*)&entry.size, sizeof(uint32_t));
 			stream.read(entry.name, 24);

@@ -14,7 +14,7 @@
 #ifndef GTAUN_UNMM_SA_FILEPROCESSER_HPP
 #define GTAUN_UNMM_SA_FILEPROCESSER_HPP
 
-#define COVERED_DIRECTORY "unmm"
+#define COVERED_DIRECTORY "unmm\\"
 
 #include <string>
 
@@ -35,22 +35,39 @@ public:
 	{
 	}
 
-	FileProcesser(const std::string& filePath) : originalFullPath(filePath)
+	FileProcesser(const std::string& filePath)
 	{
 		utils::trim(originalFullPath);
 
 		size_t len = originalFullPath.length();
 		while (len > 0)
-			if (!isprint(originalFullPath[len - 1]))
-				originalFullPath.erase(len - 1);
+		{
+			if (!isprint(originalFullPath[len - 1])) originalFullPath.erase(len - 1);
+			else break;
+			len--;
+		}
 
-		originalPassivePath = originalFullPath.substr(getGameDir().length() + 1);
+		if (filePath.find(':') != std::string::npos)
+		{
+			originalFullPath = filePath;
+			
+			if (utils::startWith(originalFullPath, getGameDir()))
+				originalPassivePath = originalFullPath.substr(getGameDir().length() + 1);
+		}
+		else
+		{
+			originalPassivePath = filePath;
+			originalFullPath = getGameDir() + "\\" + originalPassivePath;
+		}
+
 		coveredPassivePath = COVERED_DIRECTORY + originalPassivePath;
-		coveredFullPath = getGameDir() + '\\' + coveredPassivePath;
+		coveredFullPath = getGameDir() + "\\" + coveredPassivePath;
 	}
 
 	int coveredBy()
 	{
+		if (!utils::startWith(originalFullPath, getGameDir())) return none;
+
 		DWORD dwAttrib = GetFileAttributesA(coveredFullPath.c_str());
 		if (dwAttrib == INVALID_FILE_ATTRIBUTES) return none;
 		else if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY) return dir;
@@ -64,8 +81,8 @@ public:
 
 	std::string getExtension()
 	{
-		if (originalFullPath.find_last_of('.') != std::string::npos)
-			return originalFullPath.substr(originalFullPath.find_last_of('.'));
+		if (originalPassivePath.find_last_of('.') != std::string::npos)
+			return utils::toLower(originalPassivePath.substr(originalPassivePath.find_last_of('.')));
 		else
 			return std::string();
 	}

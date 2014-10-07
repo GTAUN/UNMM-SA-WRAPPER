@@ -17,10 +17,12 @@
 #include <stdint.h>
 
 #include <memory>
-#include <fstream>
+#include <map>
 #include <string>
 #include <vector>
+#include <tuple>
 #include <algorithm>
+#include <functional>
 
 namespace gtaun {
 namespace unmm {
@@ -33,6 +35,11 @@ public:
 	static const int success = 0;
 	static const int fail = 1;
 	static const int wrong_version = 2;
+
+private:
+	typedef std::function<void(void*, size_t, size_t)> read_func_type;
+
+public:
 
 	FakeImgGenerator() : sizeBytes(0)
 	{
@@ -48,7 +55,12 @@ public:
 		{
 			do
 			{
-				if (!(fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) coveredFileList.push_back(fileData.cFileName);
+				if (!(fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+				{
+					coveredFileList.push_back(fileData.cFileName);
+					coveredFileSizeBytes[fileData.cFileName] = fileData.nFileSizeLow;
+				}
+				
 			} while (FindNextFileA(iterator, &fileData));
 		}
 		FindClose(iterator);
@@ -78,7 +90,11 @@ public:
 			if (it != entries.end()) entries.erase(it);
 		}
 
-		uint32_t fakeOffset = 0;
+		uint32_t sectionOriginalSizeBytes = ImgHeader::HEADER_SIZE + (entries.size() + coveredFileList.size()) * ImgEntry::ENTRY_SIZE;
+		uint32_t sectionPaddingSizeBytes = sectionOriginalSizeBytes % ImgEntry::BLOCK_SIZE ? (sectionOriginalSizeBytes / ImgEntry::BLOCK_SIZE + 1) * ImgEntry::BLOCK_SIZE : sectionOriginalSizeBytes;
+		sizeBytes = sectionPaddingSizeBytes;
+
+		uint32_t fakeOffset = sectionPaddingSizeBytes / ImgEntry::BLOCK_SIZE;
 		for (auto& item : entries)
 		{
 			ImgEntry entry = item;
@@ -93,31 +109,26 @@ public:
 		{
 			ImgEntry entry = { 0 };
 			std::string fileFullPath = coveredDirPath + "\\" + item;
-			std::ifstream stream(fileFullPath);
+			
+			entry.fakeOffset = fakeOffset;
+			memcpy(entry.name, item.c_str(), item.length() <= sizeof(entry.name) ? item.length() : sizeof(entry.name));
 
-			if (stream)
-			{
-				entry.offset = fakeOffset;
-				entry.fakeOffset = fakeOffset;
-				memcpy(entry.name, item.c_str(), item.length() <= sizeof(entry.name) ? item.length() : sizeof(entry.name));
+			// file size should be multiple of BLOCK_SIZE
+			entry.size = coveredFileSizeBytes[item] < ImgEntry::BLOCK_SIZE ? 1 : (uint32_t)ceil((double)coveredFileSizeBytes[item] / ImgEntry::BLOCK_SIZE);
+			entry.coveredOriginalSizeBytes = coveredFileSizeBytes[item];
+			fakeEntries.push_back(entry);
 
-				stream.seekg(0, std::ios::end);
-				entry.size = (uint32_t) stream.tellg();
-				// file size should be multiple of BLOCK_SIZE
-				entry.size = entry.size < ImgEntry::BLOCK_SIZE ? 1 : (uint32_t) ceil((double) entry.size / ImgEntry::BLOCK_SIZE);
-				fakeEntries.push_back(entry);
-
-				fakeOffset += entry.size;
-				sizeBytes += entry.size * ImgEntry::BLOCK_SIZE;
-				stream.close();
-			}
+			fakeOffset += entry.size;
+			sizeBytes += entry.size * ImgEntry::BLOCK_SIZE;
 		}
 
 		fakeHeader = generateHeader(fakeEntries);
-		mapManager->registerCoveringBlock(0, ImgHeader::HEADER_SIZE, [&](void* buffer, size_t offset, size_t size) {
-			assert(size == ImgHeader::HEADER_SIZE);
-			memcpy(buffer, &fakeHeader.version, sizeof(fakeHeader.version));
-			memcpy((byte*)buffer + sizeof(fakeHeader.version), &fakeHeader.fileEntries, sizeof(fakeHeader.fileEntries));
+		mapManager->registerCoveringBlock(0, ImgHeader::HEADER_SIZE, [&](void* buffer, size_t offset, size_t size, UINT_PTR) {
+			std::vector<byte> data(ImgHeader::HEADER_SIZE, 0);
+			memcpy(&data[0], &ImgHeader::VERSION_TAG, sizeof(ImgHeader::VERSION_TAG));
+			memcpy(&data[0 + sizeof(ImgHeader::VERSION_TAG)], &fakeHeader.fileEntries, sizeof(fakeHeader.fileEntries));
+
+			memcpy(buffer, &data[0 + offset], size);
 		});
 
 		for (auto it = fakeEntries.begin(); it != fakeEntries.end(); it++)
@@ -125,40 +136,50 @@ public:
 			size_t distance = it - fakeEntries.begin();
 			size_t offset = ImgHeader::HEADER_SIZE + distance * ImgEntry::ENTRY_SIZE;
 
-			mapManager->registerCoveringBlock(offset, ImgEntry::ENTRY_SIZE, [&](void* buffer, size_t offset, size_t size) {
-				assert(size == ImgEntry::ENTRY_SIZE);
-				memcpy(buffer, &it->offset, sizeof(it->offset));
-				memcpy((byte*)buffer + sizeof(it->offset), &it->size, sizeof(it->size));
-				memcpy((byte*)buffer + sizeof(it->offset) + sizeof(it->size), it->name, sizeof(it->name));
-			});
+			mapManager->registerCoveringBlock(offset, ImgEntry::ENTRY_SIZE, [&](void* buffer, size_t offset, size_t size, UINT_PTR distance) {
+				ImgEntry& entry = fakeEntries[distance];
+
+				std::vector<byte> data(ImgEntry::ENTRY_SIZE, 0);
+				memcpy(&data[0], &entry.offset, sizeof(entry.offset));
+				memcpy(&data[0 + sizeof(entry.offset)], &entry.size, sizeof(entry.size));
+				memcpy(&data[0 + sizeof(entry.offset) + sizeof(entry.size)], entry.name, sizeof(entry.name));
+
+				memcpy(buffer, &data[0 + offset], size);
+			}, distance);
 
 			if (std::find(coveredFileList.begin(), coveredFileList.end(), it->name) != coveredFileList.end())
 			{
-				mapManager->registerCoveringBlock(it->fakeOffset * ImgEntry::BLOCK_SIZE, it->size * ImgEntry::BLOCK_SIZE, [&](void* buffer, size_t offset, size_t size) {
-					assert(size == it->size * ImgEntry::BLOCK_SIZE);
-					memset(buffer, 0, it->size * ImgEntry::BLOCK_SIZE);
+				mapManager->registerCoveringBlock(it->fakeOffset * ImgEntry::BLOCK_SIZE, it->size * ImgEntry::BLOCK_SIZE, [&](void* buffer, size_t offset, size_t size, UINT_PTR distance) {
+					memset(buffer, 0, size);
 
-					std::string fileFullPath = coveredDirPath + "\\" + it->name;
+					ImgEntry& entry = fakeEntries[distance];
+					std::string fileFullPath = coveredDirPath + "\\" + entry.name;
 					std::ifstream stream(fileFullPath);
 					
 					if (stream)
 					{
-						stream.read((char*)buffer, it->size * ImgEntry::BLOCK_SIZE);
+						stream.seekg(offset, std::ios::beg);
+						stream.read((char*)buffer, size);
 						stream.close();
 					}
-				});
+				}, distance);
 			}
 			else
 			{
-				mapManager->registerCoveringBlock(it->fakeOffset * ImgEntry::BLOCK_SIZE, it->size * ImgEntry::BLOCK_SIZE, [&](void* buffer, size_t offset, size_t size) {
-					assert(size == it->size * ImgEntry::BLOCK_SIZE);
-					memset(buffer, 0, it->size * ImgEntry::BLOCK_SIZE);
-					reader->read(it->getOffsetBytes(), it->getSizeBytes(), buffer);
-				});
+				mapManager->registerCoveringBlock(it->fakeOffset * ImgEntry::BLOCK_SIZE, it->size * ImgEntry::BLOCK_SIZE, [&](void* buffer, size_t offset, size_t size, UINT_PTR distance) {
+					ImgEntry& entry = fakeEntries[distance];
+					reader->read(entry.getOffsetBytes() + offset, size, buffer);
+				}, distance);
 			}
 		}
 
-		sizeBytes += ImgHeader::HEADER_SIZE + fakeEntries.size() * ImgEntry::ENTRY_SIZE;
+		if (sectionPaddingSizeBytes > sectionOriginalSizeBytes)
+		{
+			mapManager->registerCoveringBlock(sectionOriginalSizeBytes, sectionPaddingSizeBytes - sectionOriginalSizeBytes, [&](void* buffer, size_t offset, size_t size, UINT_PTR) {
+				memset(buffer, 0, size);
+			});
+		}
+
 		return success;
 	}
 
@@ -175,6 +196,7 @@ public:
 private:
 	std::string sourceImgPath, coveredDirPath;
 	std::vector<std::string> coveredFileList;
+	std::map<std::string, uint32_t> coveredFileSizeBytes;
 	
 	std::shared_ptr<ImgReader> reader;
 	ImgHeader fakeHeader;
