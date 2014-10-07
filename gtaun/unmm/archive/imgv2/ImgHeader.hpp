@@ -25,7 +25,7 @@ namespace imgv2 {
 struct ImgHeader
 {
 	static const uint32_t VERSION_TAG = 0x32524556;		// ASCII: VER2
-
+	static const uint32_t HEADER_SIZE = 8;				// VERSION_TAG + entries
 
 	char version[4];
 	uint32_t fileEntries;

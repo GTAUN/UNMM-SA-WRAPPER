@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -19,13 +19,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -94,9 +94,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="gtaun\unmm\archive\imgv2\ImgEntry.hpp" />
+    <ClInclude Include="gtaun\unmm\archive\imgv2\FakeImgGenerator.hpp" />
     <ClInclude Include="gtaun\unmm\archive\imgv2\ImgHeader.hpp" />
+    <ClInclude Include="gtaun\unmm\archive\imgv2\ImgReader.hpp" />
     <ClInclude Include="gtaun\unmm\archive\imgv2\ImgV2.hpp" />
     <ClInclude Include="gtaun\unmm\CoveringMapManager.hpp" />
+    <ClInclude Include="gtaun\unmm\sa\FileProcesser.hpp" />
+    <ClInclude Include="gtaun\unmm\Utils.hpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="subhook\subhook.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

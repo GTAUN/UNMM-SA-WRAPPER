@@ -5,7 +5,7 @@ you dont need to modify any data file, and enjoy Mods.
 
 Requires
 -----------------
-* `C++11 Support` (Visual Studio 2012)
+* `C++11 Support` (Visual Studio 2013 or higher)
 
 Dependencies
 -----------------

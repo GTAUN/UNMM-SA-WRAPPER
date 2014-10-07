@@ -22,25 +22,21 @@
 #include <fstream>
 
 #include <subhook.h>
+#include <gtaun/unmm/Utils.hpp>
 #include <gtaun/unmm/CoveringMapManager.hpp>
 #include <gtaun/unmm/archive/imgv2/ImgV2.hpp>
+#include <gtaun/unmm/sa/FileProcesser.hpp>
 
+namespace unmm = gtaun::unmm;
+namespace imgv2 = gtaun::unmm::archive::imgv2;
+namespace sa = gtaun::unmm::sa;
+	
 using namespace std;
-
 
 #define ORIGINAL_LIB_FILENAME "original_eax.dll"
 #define KERNEL32_LIB_FILENAME "Kernel32.dll"
 
 #define UNMM_LOG_FILENAME "UNMM-SA.log"
-
-#define SCOPE_REMOVE_HOOKES \
-	SubHook::ScopedRemove createFileHookRemove(&createFileHook); \
-	SubHook::ScopedRemove closeHandleHookRemove(&closeHandleHook); \
-	SubHook::ScopedRemove readFileHookRemove(&readFileHook); \
-	SubHook::ScopedRemove readFileExHookRemove(&readFileExHook); \
-	SubHook::ScopedRemove setFilePointerHookRemove(&setFilePointerHook); \
-	SubHook::ScopedRemove createFileMappingHookRemove(&createFileMappingHook);
-
 
 LPCSTR IMPORT_NAMES[] = {"DllCanUnloadNow", "DllGetClassObject", "DllRegisterServer", "DllUnregisterServer", "EAXDirectSoundCreate", "EAXDirectSoundCreate8", "GetCurrentVersion"};
 
@@ -58,6 +54,9 @@ UINT_PTR procAddresses[7] = {0};
 SubHook createFileHook, closeHandleHook, readFileHook, readFileExHook, setFilePointerHook, createFileMappingHook;
 
 unordered_map<HANDLE, string> openedFilenames;
+unordered_map<HANDLE, DWORD> currentOffset;
+unordered_map<std::string, imgv2::FakeImgGenerator> imgGenerators;
+unordered_map<HANDLE, bool> coveredFiles;
 
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
@@ -91,7 +90,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 		void* originalSetFilePointer = GetProcAddress(kernel32, "SetFilePointer");
 		void* originalCreateFileMapping = GetProcAddress(kernel32, "CreateFileMappingA");
 
-		CloseHandle(kernel32);
+		//CloseHandle(kernel32);
 
 		createFileHook.Install((void*) originalCreateFileA, (void*) HookedCreateFileA);
 		closeHandleHook.Install((void*) originalCloseHandle, (void*) HookedCloseHandle);
@@ -122,12 +121,41 @@ HANDLE WINAPI HookedCreateFileA
 {
 	SCOPE_REMOVE_HOOKES;
 
-	HANDLE ret = CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+	HANDLE ret;
+
+	sa::FileProcesser processor(lpFileName);
+	if (processor.coveredBy() == sa::FileProcesser::none)
+		ret = CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+	else
+	{
+		if (processor.coveredBy() == sa::FileProcesser::file)
+			ret = CreateFileA(processor.getCoveredPath().c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+		else // covered by dir
+		{
+			if (processor.getExtension() != IMG_FILE_EXTENSTION)
+				ret = CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+			else
+			{
+				ret = CreateFileA(lpFileName, dwDesiredAccess, FILE_SHARE_READ, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+
+				if (ret != INVALID_HANDLE_VALUE)
+				{
+					currentOffset[ret] = 0;
+
+					if (imgGenerators.find(lpFileName) == imgGenerators.end()) // only generate once
+					{
+						imgGenerators[lpFileName] = imgv2::FakeImgGenerator(lpFileName, processor.getCoveredPath());
+						assert(imgGenerators[lpFileName].generate() == imgv2::FakeImgGenerator::success);
+					}
+				}
+			}
+		}
+
+		coveredFiles[ret] = true;
+	}
 
 	if (ret != INVALID_HANDLE_VALUE)
-	{
 		openedFilenames[ret] = lpFileName;
-	}
 
 	ofstream logFile(UNMM_LOG_FILENAME, ios::out | ios::app | ios::ate);
 	if (logFile)
@@ -158,6 +186,12 @@ BOOL WINAPI HookedCloseHandle(HANDLE hObject)
 		}
 
 		openedFilenames.erase(it);
+
+		if (currentOffset.find(hObject) != currentOffset.end())
+			currentOffset.erase(currentOffset.find(hObject));
+
+		if (coveredFiles.find(hObject) != coveredFiles.end())
+			coveredFiles.erase(coveredFiles.find(hObject));
 	}
 
 	return ret;
@@ -183,8 +217,41 @@ BOOL WINAPI HookedReadFile
 				<< lpNumberOfBytesRead << ", " << lpOverlapped << ");" << endl;
 		}
 
-		logFile.close();
+		if (coveredFiles.find(hFile) != coveredFiles.end())
+			logFile << "This file is covered." << endl;
+
+		if (lpOverlapped)
+			logFile << "lpOverlapped->Offset = " << lpOverlapped->Offset << ", hEvent = " << lpOverlapped->hEvent << endl;
 	}
+
+	auto it = imgGenerators.find(openedFilenames[hFile]);
+	if (it != imgGenerators.end())
+	{
+		auto manager = it->second.getMapManager();
+		if (!lpOverlapped)
+		{
+			if (logFile)
+				logFile << "manager->read(" << lpBuffer << ", " << currentOffset[hFile] << "," << nNumberOfBytesToRead << ");" << endl;
+
+			manager->read(lpBuffer, currentOffset[hFile], nNumberOfBytesToRead);
+			currentOffset[hFile] += nNumberOfBytesToRead;
+		}
+		else
+		{
+			if (logFile)
+				logFile << "manager->read(" << lpBuffer << ", " << lpOverlapped->Offset << "," << nNumberOfBytesToRead << ");" << endl;
+
+			manager->read(lpBuffer, lpOverlapped->Offset, nNumberOfBytesToRead);
+			currentOffset[hFile] = lpOverlapped->Offset + nNumberOfBytesToRead;
+			lpOverlapped->Internal = ERROR_SUCCESS;
+		}
+
+		if (lpNumberOfBytesRead) *lpNumberOfBytesRead = nNumberOfBytesToRead;
+		return TRUE;
+	}
+
+	if (logFile)
+		logFile.close();
 
 	return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
 }
@@ -195,6 +262,19 @@ BOOL WINAPI HookedReadFileEx
 	SCOPE_REMOVE_HOOKES;
 
 	ofstream logFile(UNMM_LOG_FILENAME, ios::out | ios::app | ios::ate);
+
+	auto it = imgGenerators.find(openedFilenames[hFile]);
+	if (it != imgGenerators.end())
+	{
+		if (logFile)
+			logFile << "manager->read(" << lpBuffer << ", " << currentOffset[hFile] << "," << nNumberOfBytesToRead << ");" << endl;
+
+		auto manager = it->second.getMapManager();
+		manager->read(lpBuffer, currentOffset[hFile], nNumberOfBytesToRead);
+		currentOffset[hFile] += nNumberOfBytesToRead;
+		return TRUE;
+	}
+
 	if (logFile)
 	{
 		auto it = openedFilenames.find(hFile);
@@ -209,6 +289,9 @@ BOOL WINAPI HookedReadFileEx
 				<< ", " << lpOverlapped << ", " << lpCompletionRoutine << ");" << endl;
 		}
 
+		if (coveredFiles.find(hFile) != coveredFiles.end())
+			logFile << "This file is covered." << endl;
+
 		logFile.close();
 	}
 
@@ -219,6 +302,27 @@ DWORD WINAPI HookedSetFilePointer
 (HANDLE hFile, LONG lDistanceToMove, PLONG lpDistanceToMoveHigh, DWORD dwMoveMethod)
 {
 	SCOPE_REMOVE_HOOKES;
+
+	auto it = imgGenerators.find(openedFilenames[hFile]);
+	if (it != imgGenerators.end())
+	{
+		switch (dwMoveMethod)
+		{
+		case FILE_BEGIN:
+			currentOffset[hFile] = 0;
+			break;
+
+		case FILE_CURRENT:
+			break;
+
+		case FILE_END:
+			currentOffset[hFile] = it->second.getSizeBytes();
+			break;
+		}
+
+		currentOffset[hFile] += lDistanceToMove;
+		return currentOffset[hFile];
+	}
 
 	ofstream logFile(UNMM_LOG_FILENAME, ios::out | ios::app | ios::ate);
 	if (logFile)
@@ -234,6 +338,9 @@ DWORD WINAPI HookedSetFilePointer
 			logFile << "SetFilePointer(" << hFile << ", " << lDistanceToMove << ", "
 				<< lpDistanceToMoveHigh << ", " << dwMoveMethod << ");" << endl;
 		}
+
+		if (coveredFiles.find(hFile) != coveredFiles.end())
+			logFile << "This file is covered." << endl;
 
 		logFile.close();
 	}
