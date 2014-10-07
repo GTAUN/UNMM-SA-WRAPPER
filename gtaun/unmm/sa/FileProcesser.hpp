@@ -35,18 +35,8 @@ public:
 	{
 	}
 
-	FileProcesser(const std::string& filePath)
+	FileProcesser(std::string filePath)
 	{
-		utils::trim(originalFullPath);
-
-		size_t len = originalFullPath.length();
-		while (len > 0)
-		{
-			if (!isprint(originalFullPath[len - 1])) originalFullPath.erase(len - 1);
-			else break;
-			len--;
-		}
-
 		if (filePath.find(':') != std::string::npos)
 		{
 			originalFullPath = filePath;

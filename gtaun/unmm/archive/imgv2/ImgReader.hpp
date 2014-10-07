@@ -15,7 +15,6 @@
 #define GTAUN_UNMM_ARCHIVE_IMGV2_IMGREADER_HPP
 
 #include <stdint.h>
-#include <fstream>
 #include <string>
 #include <vector>
 
@@ -29,41 +28,45 @@ public:
 	static const int success = 0;
 	static const int fail = 1;
 
-	ImgReader() : state(fail)
+	ImgReader() : state(fail), handle(INVALID_HANDLE_VALUE)
 	{
 	}
 
-	ImgReader(std::string filePath) : state(fail)
+	ImgReader(const std::string& filePath) : state(fail), handle(INVALID_HANDLE_VALUE)
 	{
 		open(filePath);
 	}
 
 	~ImgReader() 
 	{
-		if (stream.is_open()) stream.close();
+		SCOPE_REMOVE_HOOKES
+
+		if (handle != INVALID_HANDLE_VALUE) CloseHandle(handle);
 	}
 
-	void open(std::string filePath)
+	void open(const std::string& filePath)
 	{
-		if (stream.is_open() || filePath.empty()) return;
+		if (handle != INVALID_HANDLE_VALUE || filePath.empty()) return;
 
-		stream.open(filePath, std::ios::in | std::ios::binary);
-		if (!stream.is_open()) return;
+		SCOPE_REMOVE_HOOKES
 
-		stream.read(header.version, sizeof(header.version));
+		handle = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+		if (handle == INVALID_HANDLE_VALUE) return;
+
+		ReadFile(handle, header.version, sizeof(header.version), NULL, NULL);
 		if (!header.checkVersion())
 		{
-			stream.close();
+			CloseHandle(handle);
 			return;
 		}
 
-		stream.read((char*)&header.fileEntries, sizeof(uint32_t));
+		ReadFile(handle, &header.fileEntries, sizeof(header.fileEntries), NULL, NULL);
 		for (uint32_t i = 0; i < header.fileEntries; i++)
 		{
 			ImgEntry entry = { 0 };
-			stream.read((char*)&entry.offset, sizeof(uint32_t));
-			stream.read((char*)&entry.size, sizeof(uint32_t));
-			stream.read(entry.name, 24);
+			ReadFile(handle, &entry.offset, sizeof(entry.offset), NULL, NULL);
+			ReadFile(handle, &entry.size, sizeof(entry.size), NULL, NULL);
+			ReadFile(handle, entry.name, sizeof(entry.name), NULL, NULL);
 			entries.push_back(entry);
 		}
 
@@ -72,8 +75,12 @@ public:
 
 	void read(uint32_t offsetBytes, uint32_t sizeBytes, void* buf)
 	{
-		stream.seekg(offsetBytes, std::ios::beg);
-		stream.read((char*)buf, sizeBytes);
+		if (!isOpen()) return;
+
+		SCOPE_REMOVE_HOOKES
+
+		SetFilePointer(handle, offsetBytes, NULL, FILE_BEGIN);
+		ReadFile(handle, buf, sizeBytes, NULL, NULL);
 	}
 
 	std::vector<ImgEntry> getEntries()
@@ -84,7 +91,7 @@ public:
 
 	bool isOpen()
 	{
-		return state == success && stream.is_open();
+		return state == success && handle != INVALID_HANDLE_VALUE;
 	}
 
 	bool checkVersion() 
@@ -95,7 +102,7 @@ public:
 
 private:
 	ImgHeader header;
-	std::ifstream stream;
+	HANDLE handle;
 	std::vector<ImgEntry> entries;
 	int state;
 };

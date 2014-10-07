@@ -43,7 +43,6 @@ struct ImgEntry
 
 	// for FakeImgGenerator
 	uint32_t fakeOffset;
-	uint32_t coveredOriginalSizeBytes;
 };
 
 } // namespace imgv2

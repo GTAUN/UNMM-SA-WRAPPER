@@ -175,7 +175,7 @@ public:
 	~CoveringMapManager()
 	{
 		orderCount = -1;
-		//query(bgi::covered_by(tree.bounds()), [&] (const rtree_value_type& v) { delete v.second; });
+		query(bgi::covered_by(tree.bounds()), [&] (const rtree_value_type& v) { delete v.second; });
 	}
 
 	CoveringDataEntry* registerCoveringBlock(size_t offset, size_t size, read_func_type readFunc, UINT_PTR param = -1)
@@ -310,7 +310,7 @@ private:
 
 	void unregisterCoveringBlock(CoveringDataEntry* entry)
 	{
-		if (orderCount < 0) return;
+		if (orderCount == 0) return;
 
 		size_t end = entry->offset + entry->size - 1;
 		range_type range(point_type(entry->offset), point_type(end));

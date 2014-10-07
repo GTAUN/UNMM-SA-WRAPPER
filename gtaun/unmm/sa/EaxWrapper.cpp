@@ -38,15 +38,6 @@ using namespace std;
 
 #define UNMM_LOG_FILENAME "UNMM-SA.log"
 
-#define SCOPE_REMOVE_HOOKES \
-	SubHook::ScopedRemove createFileHookRemove(&createFileHook); \
-	SubHook::ScopedRemove closeHandleHookRemove(&closeHandleHook); \
-	SubHook::ScopedRemove readFileHookRemove(&readFileHook); \
-	SubHook::ScopedRemove readFileExHookRemove(&readFileExHook); \
-	SubHook::ScopedRemove setFilePointerHookRemove(&setFilePointerHook); \
-	SubHook::ScopedRemove createFileMappingHookRemove(&createFileMappingHook);
-
-
 LPCSTR IMPORT_NAMES[] = {"DllCanUnloadNow", "DllGetClassObject", "DllRegisterServer", "DllUnregisterServer", "EAXDirectSoundCreate", "EAXDirectSoundCreate8", "GetCurrentVersion"};
 
 HANDLE WINAPI HookedCreateFileA (LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);

@@ -108,14 +108,11 @@ public:
 		for (auto& item : coveredFileList)
 		{
 			ImgEntry entry = { 0 };
-			std::string fileFullPath = coveredDirPath + "\\" + item;
-			
 			entry.fakeOffset = fakeOffset;
 			memcpy(entry.name, item.c_str(), item.length() <= sizeof(entry.name) ? item.length() : sizeof(entry.name));
 
 			// file size should be multiple of BLOCK_SIZE
 			entry.size = coveredFileSizeBytes[item] < ImgEntry::BLOCK_SIZE ? 1 : (uint32_t)ceil((double)coveredFileSizeBytes[item] / ImgEntry::BLOCK_SIZE);
-			entry.coveredOriginalSizeBytes = coveredFileSizeBytes[item];
 			fakeEntries.push_back(entry);
 
 			fakeOffset += entry.size;
@@ -131,7 +128,7 @@ public:
 			memcpy(buffer, &data[0 + offset], size);
 		});
 
-		for (auto it = fakeEntries.begin(); it != fakeEntries.end(); it++)
+		for (auto it = fakeEntries.begin(); it != fakeEntries.end(); ++it)
 		{
 			size_t distance = it - fakeEntries.begin();
 			size_t offset = ImgHeader::HEADER_SIZE + distance * ImgEntry::ENTRY_SIZE;
@@ -153,15 +150,17 @@ public:
 					memset(buffer, 0, size);
 
 					ImgEntry& entry = fakeEntries[distance];
-					assert(size > entry.getSizeBytes() - offset);
+					assert(size <= entry.getSizeBytes() - offset);
 					std::string fileFullPath = coveredDirPath + "\\" + entry.name;
-					std::ifstream stream(fileFullPath);
-					
-					if (stream)
+
+					SCOPE_REMOVE_HOOKES
+
+					HANDLE handle = CreateFileA(fileFullPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+					if (handle != INVALID_HANDLE_VALUE)
 					{
-						stream.seekg(offset, std::ios::beg);
-						stream.read((char*)buffer, size);
-						stream.close();
+						SetFilePointer(handle, offset, NULL, FILE_BEGIN);
+						ReadFile(handle, buffer, size, NULL, NULL);
+						CloseHandle(handle);
 					}
 				}, distance);
 			}
@@ -169,7 +168,7 @@ public:
 			{
 				mapManager->registerCoveringBlock(it->fakeOffset * ImgEntry::BLOCK_SIZE, it->size * ImgEntry::BLOCK_SIZE, [&](void* buffer, size_t offset, size_t size, UINT_PTR distance) {
 					ImgEntry& entry = fakeEntries[distance];
-					assert(size > entry.getSizeBytes() - offset);
+					assert(size <= entry.getSizeBytes() - offset);
 					reader->read(entry.getOffsetBytes() + offset, size, buffer);
 				}, distance);
 			}
