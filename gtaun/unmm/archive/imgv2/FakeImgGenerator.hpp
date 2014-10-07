@@ -153,6 +153,7 @@ public:
 					memset(buffer, 0, size);
 
 					ImgEntry& entry = fakeEntries[distance];
+					assert(size > entry.getSizeBytes() - offset);
 					std::string fileFullPath = coveredDirPath + "\\" + entry.name;
 					std::ifstream stream(fileFullPath);
 					
@@ -168,6 +169,7 @@ public:
 			{
 				mapManager->registerCoveringBlock(it->fakeOffset * ImgEntry::BLOCK_SIZE, it->size * ImgEntry::BLOCK_SIZE, [&](void* buffer, size_t offset, size_t size, UINT_PTR distance) {
 					ImgEntry& entry = fakeEntries[distance];
+					assert(size > entry.getSizeBytes() - offset);
 					reader->read(entry.getOffsetBytes() + offset, size, buffer);
 				}, distance);
 			}

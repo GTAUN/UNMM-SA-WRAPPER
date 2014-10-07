@@ -72,7 +72,7 @@ public:
 
 	void read(uint32_t offsetBytes, uint32_t sizeBytes, void* buf)
 	{
-		stream.seekg(offsetBytes);
+		stream.seekg(offsetBytes, std::ios::beg);
 		stream.read((char*)buf, sizeBytes);
 	}
 

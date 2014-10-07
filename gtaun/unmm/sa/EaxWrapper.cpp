@@ -236,13 +236,20 @@ BOOL WINAPI HookedReadFile
 	auto it = imgGenerators.find(openedFilenames[hFile]);
 	if (it != imgGenerators.end())
 	{
-		if (logFile)
-			logFile << "manager->read(" << lpBuffer << ", " << currentOffset[hFile] << "," << nNumberOfBytesToRead << ");" << endl;
-
 		auto manager = it->second.getMapManager();
-		if (!lpOverlapped) manager->read(lpBuffer, currentOffset[hFile], nNumberOfBytesToRead);
+		if (!lpOverlapped)
+		{
+			if (logFile)
+				logFile << "manager->read(" << lpBuffer << ", " << currentOffset[hFile] << "," << nNumberOfBytesToRead << ");" << endl;
+
+			manager->read(lpBuffer, currentOffset[hFile], nNumberOfBytesToRead);
+			currentOffset[hFile] += nNumberOfBytesToRead;
+		}
 		else
 		{
+			if (logFile)
+				logFile << "manager->read(" << lpBuffer << ", " << lpOverlapped->Offset << "," << nNumberOfBytesToRead << ");" << endl;
+
 			manager->read(lpBuffer, lpOverlapped->Offset, nNumberOfBytesToRead);
 			currentOffset[hFile] = lpOverlapped->Offset + nNumberOfBytesToRead;
 			lpOverlapped->Internal = ERROR_SUCCESS;
