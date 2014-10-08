@@ -31,11 +31,11 @@ public:
 	static const int dir = 1;
 	static const int file = 2;
 
-	FileProcesser()
+	FileProcesser() : coveredType(none)
 	{
 	}
 
-	FileProcesser(std::string filePath)
+	FileProcesser(std::string filePath) : coveredType(none)
 	{
 		if (filePath.find(':') != std::string::npos)
 		{
@@ -52,16 +52,22 @@ public:
 
 		coveredPassivePath = COVERED_DIRECTORY + originalPassivePath;
 		coveredFullPath = getGameDir() + "\\" + coveredPassivePath;
-	}
 
-	int coveredBy()
-	{
-		if (!utils::startWith(originalFullPath, getGameDir())) return none;
+		if (originalPassivePath.empty())
+		{
+			coveredType = none;
+			return;
+		}
 
 		DWORD dwAttrib = GetFileAttributesA(coveredFullPath.c_str());
-		if (dwAttrib == INVALID_FILE_ATTRIBUTES) return none;
-		else if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY) return dir;
-		else return file;
+		if (dwAttrib == INVALID_FILE_ATTRIBUTES) coveredType = none;
+		else if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY) coveredType = dir;
+		else coveredType = file;
+	}
+
+	int coveredBy() const
+	{
+		return coveredType;
 	}
 
 	std::string getCoveredPath() const 
@@ -95,6 +101,7 @@ public:
 private:
 	std::string originalFullPath, originalPassivePath;
 	std::string coveredFullPath, coveredPassivePath;
+	int coveredType;
 };
 
 } // namespace sa
