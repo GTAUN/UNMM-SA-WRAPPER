@@ -137,9 +137,9 @@ public:
 				ImgEntry& entry = fakeEntries[distance];
 
 				std::vector<byte> data(ImgEntry::ENTRY_SIZE, 0);
-				memcpy(&data[0], &entry.offset, sizeof(entry.offset));
-				memcpy(&data[0 + sizeof(entry.offset)], &entry.size, sizeof(entry.size));
-				memcpy(&data[0 + sizeof(entry.offset) + sizeof(entry.size)], entry.name, sizeof(entry.name));
+				memcpy(&data[0], &entry.fakeOffset, sizeof(entry.fakeOffset));
+				memcpy(&data[0 + sizeof(entry.fakeOffset)], &entry.size, sizeof(entry.size));
+				memcpy(&data[0 + sizeof(entry.fakeOffset) + sizeof(entry.size)], entry.name, sizeof(entry.name));
 
 				memcpy(buffer, &data[0 + offset], size);
 			}, distance);
