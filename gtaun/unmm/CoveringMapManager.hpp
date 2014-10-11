@@ -174,7 +174,7 @@ public:
 
 	~CoveringMapManager()
 	{
-		orderCount = -1;
+		orderCount = 0;
 		query(bgi::covered_by(tree.bounds()), [&] (const rtree_value_type& v) { delete v.second; });
 	}
 

@@ -243,15 +243,15 @@ BOOL WINAPI HookedReadFile
 
 			manager->read(lpBuffer, lpOverlapped->Offset, nNumberOfBytesToRead);
 			currentOffset[hFile] = lpOverlapped->Offset + nNumberOfBytesToRead;
-			lpOverlapped->Internal = ERROR_SUCCESS;
+			lpOverlapped->InternalHigh = lpOverlapped->Internal = ERROR_SUCCESS;
 		}
 
 		if (lpNumberOfBytesRead) *lpNumberOfBytesRead = nNumberOfBytesToRead;
+		if (logFile) logFile.close();
 		return TRUE;
 	}
 
-	if (logFile)
-		logFile.close();
+	if (logFile) logFile.close();
 
 	return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
 }
