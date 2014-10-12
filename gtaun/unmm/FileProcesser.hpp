@@ -11,8 +11,8 @@
 * GNU General Public License for more details.
 */
 
-#ifndef GTAUN_UNMM_SA_FILEPROCESSER_HPP
-#define GTAUN_UNMM_SA_FILEPROCESSER_HPP
+#ifndef GTAUN_UNMM_FILEPROCESSER_HPP
+#define GTAUN_UNMM_FILEPROCESSER_HPP
 
 #define COVERED_DIRECTORY "unmm\\"
 
@@ -20,9 +20,6 @@
 
 namespace gtaun {
 namespace unmm {
-namespace sa {
-
-namespace utils = gtaun::unmm::utils;
 
 class FileProcesser
 {
@@ -104,8 +101,7 @@ private:
 	int coveredType;
 };
 
-} // namespace sa
 } // namespace unmm
 } // namespace gtaun
 
-#endif // GTAUN_UNMM_SA_FILEPROCESSER_HPP
+#endif // GTAUN_UNMM_FILEPROCESSER_HPP
