@@ -25,11 +25,10 @@
 #include <gtaun/unmm/Utils.hpp>
 #include <gtaun/unmm/CoveringMapManager.hpp>
 #include <gtaun/unmm/archive/imgv2/ImgV2.hpp>
-#include <gtaun/unmm/sa/FileProcesser.hpp>
+#include <gtaun/unmm/FileProcesser.hpp>
 
 namespace unmm = gtaun::unmm;
 namespace imgv2 = gtaun::unmm::archive::imgv2;
-namespace sa = gtaun::unmm::sa;
 	
 using namespace std;
 
@@ -90,7 +89,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 		void* originalSetFilePointer = GetProcAddress(kernel32, "SetFilePointer");
 		void* originalCreateFileMapping = GetProcAddress(kernel32, "CreateFileMappingA");
 
-		//CloseHandle(kernel32);
+		FreeLibrary(kernel32);
 
 		createFileHook.Install((void*) originalCreateFileA, (void*) HookedCreateFileA);
 		closeHandleHook.Install((void*) originalCloseHandle, (void*) HookedCloseHandle);
@@ -123,12 +122,12 @@ HANDLE WINAPI HookedCreateFileA
 
 	HANDLE ret;
 
-	sa::FileProcesser processor(lpFileName);
-	if (processor.coveredBy() == sa::FileProcesser::none)
+	unmm::FileProcesser processor(lpFileName);
+	if (processor.coveredBy() == unmm::FileProcesser::none)
 		ret = CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 	else
 	{
-		if (processor.coveredBy() == sa::FileProcesser::file)
+		if (processor.coveredBy() == unmm::FileProcesser::file)
 			ret = CreateFileA(processor.getCoveredPath().c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 		else // covered by dir
 		{
