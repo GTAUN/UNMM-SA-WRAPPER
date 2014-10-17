@@ -40,6 +40,7 @@ using namespace std;
 LPCSTR IMPORT_NAMES[] = {"DllCanUnloadNow", "DllGetClassObject", "DllRegisterServer", "DllUnregisterServer", "EAXDirectSoundCreate", "EAXDirectSoundCreate8", "GetCurrentVersion"};
 
 HANDLE WINAPI HookedCreateFileA (LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
+HANDLE WINAPI HookedCreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
 BOOL WINAPI HookedCloseHandle (HANDLE hObject);
 BOOL WINAPI HookedReadFile (HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped);
 BOOL WINAPI HookedReadFileEx (HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPOVERLAPPED lpOverlapped, LPOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
@@ -63,6 +64,12 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	dllInstance = hinstDLL;
 	if (fdwReason == DLL_PROCESS_ATTACH)
 	{
+		DeleteFile(UNMM_LOG_FILENAME);
+
+		// XXX: Quick fix for sa-mp
+		auto cmdLine = GetCommandLine();
+		if (strstr(cmdLine, "-c -n ")) LoadLibrary("samp.dll");
+
 		originalDllInstance = LoadLibrary(ORIGINAL_LIB_FILENAME);
 		if (originalDllInstance == nullptr)
 		{
@@ -83,6 +90,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 		}
 
 		void* originalCreateFileA = GetProcAddress(kernel32, "CreateFileA");
+		void* originalCreateFileW = GetProcAddress(kernel32, "CreateFileW");
 		void* originalCloseHandle = GetProcAddress(kernel32, "CloseHandle");
 		void* originalReadFile = GetProcAddress(kernel32, "ReadFile");
 		void* originalReadFileEx = GetProcAddress(kernel32, "ReadFileEx");
@@ -93,6 +101,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
 		createFileHook.init((void*)originalCreateFileA, (void*)HookedCreateFileA);
 		createFileHook.hook();
+
+		//createFileHook.init((void*)originalCreateFileW, (void*)HookedCreateFileW);
+		//createFileHook.hook();
 
 		closeHandleHook.init((void*)originalCloseHandle, (void*)HookedCloseHandle);
 		closeHandleHook.hook();
@@ -108,8 +119,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
 		// createFileMappingHook.init((void*) originalCreateFileMapping, (void*) HookedCreateFileMappingA);
 		// createFileMappingHook.hook();
-
-		DeleteFile(UNMM_LOG_FILENAME);
 	}
 	else if (fdwReason == DLL_PROCESS_DETACH)
 	{
@@ -147,6 +156,62 @@ HANDLE WINAPI HookedCreateFileA
 			else
 			{
 				ret = CreateFileA(lpFileName, dwDesiredAccess, FILE_SHARE_READ, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+
+				if (ret != INVALID_HANDLE_VALUE)
+				{
+					currentOffset[ret] = 0;
+
+					if (imgGenerators.find(lpFileName) == imgGenerators.end()) // only generate once
+					{
+						imgGenerators[lpFileName] = imgv2::FakeImgGenerator(lpFileName, processor.getCoveredPath());
+						assert(imgGenerators[lpFileName].generate() == imgv2::FakeImgGenerator::success);
+					}
+				}
+			}
+		}
+
+		coveredFiles[ret] = true;
+	}
+
+	if (ret != INVALID_HANDLE_VALUE)
+		openedFilenames[ret] = lpFileName;
+
+	ofstream logFile(UNMM_LOG_FILENAME, ios::out | ios::app | ios::ate);
+	if (logFile)
+	{
+		logFile << "CreateFileA(" << lpFileName << ", " << dwDesiredAccess << ", " << dwShareMode << ", "
+			<< lpSecurityAttributes << ", " << dwCreationDisposition << ", " << dwFlagsAndAttributes << ", "
+			<< hTemplateFile << ")=" << ret << ";" << endl;
+		logFile.close();
+	}
+
+	return ret;
+}
+
+HANDLE WINAPI HookedCreateFileW
+(LPCWSTR lpwFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
+{
+	SCOPE_REMOVE_HOOKES;
+
+	char lpFileName[2048]; size_t si;
+	wcstombs_s(&si, lpFileName, lpwFileName, 2047);
+
+	HANDLE ret;
+
+	unmm::FileProcesser processor(lpFileName);
+	if (processor.coveredBy() == unmm::FileProcesser::none)
+		ret = CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+	else
+	{
+		if (processor.coveredBy() == unmm::FileProcesser::file)
+			ret = CreateFileA(processor.getCoveredPath().c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+		else // covered by dir
+		{
+			if (processor.getExtension() != IMG_FILE_EXTENSTION)
+				ret = CreateFileW(lpwFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+			else
+			{
+				ret = CreateFileW(lpwFileName, dwDesiredAccess, FILE_SHARE_READ, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 
 				if (ret != INVALID_HANDLE_VALUE)
 				{
