@@ -252,7 +252,7 @@ BOOL WINAPI HookedReadFile
 				logFile << "manager->read(" << lpBuffer << ", " << lpOverlapped->Offset << "," << nNumberOfBytesToRead << ");" << endl;
 
 			manager->read(lpBuffer, lpOverlapped->Offset, nNumberOfBytesToRead);
-			currentOffset[hFile] = lpOverlapped->Offset + nNumberOfBytesToRead;
+			lpOverlapped->Offset = lpOverlapped->Offset + nNumberOfBytesToRead;
 			lpOverlapped->InternalHigh = lpOverlapped->Internal = ERROR_SUCCESS;
 		}
 

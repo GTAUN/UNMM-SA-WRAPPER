@@ -15,9 +15,6 @@
     <ClCompile Include="gtaun\unmm\sa\EaxWrapper.cpp">
       <Filter>gtaun::unmm::sa</Filter>
     </ClCompile>
-    <ClCompile Include="gtaun\unmm\sa\SubhookStatic.cpp">
-      <Filter>gtaun::unmm::sa</Filter>
-    </ClCompile>
     <ClCompile Include="gtaun\unmm\SimpleInlineHook.cpp">
       <Filter>gtaun::unmm</Filter>
     </ClCompile>
