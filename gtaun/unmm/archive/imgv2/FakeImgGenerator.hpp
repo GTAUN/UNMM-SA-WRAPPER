@@ -156,11 +156,15 @@ public:
 					SCOPE_REMOVE_HOOKES
 
 					HANDLE handle = CreateFileA(fileFullPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+					assert(handle != INVALID_HANDLE_VALUE);
 					if (handle != INVALID_HANDLE_VALUE)
 					{
 						SetFilePointer(handle, offset, NULL, FILE_BEGIN);
-						ReadFile(handle, buffer, size, NULL, NULL);
+						DWORD readBytes = 0;
+						ReadFile(handle, buffer, size, &readBytes, NULL);
 						CloseHandle(handle);
+
+						assert(readBytes == size);
 					}
 				}, distance);
 			}

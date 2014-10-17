@@ -53,20 +53,21 @@ public:
 		handle = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
 		if (handle == INVALID_HANDLE_VALUE) return;
 
-		ReadFile(handle, header.version, sizeof(header.version), NULL, NULL);
-		if (!header.checkVersion())
+		DWORD readBytes = 0;
+		ReadFile(handle, header.version, sizeof(header.version), &readBytes, NULL);
+		if (readBytes == sizeof(header.version) && !header.checkVersion())
 		{
 			CloseHandle(handle);
 			return;
 		}
 
-		ReadFile(handle, &header.fileEntries, sizeof(header.fileEntries), NULL, NULL);
+		ReadFile(handle, &header.fileEntries, sizeof(header.fileEntries), &readBytes, NULL);
 		for (uint32_t i = 0; i < header.fileEntries; i++)
 		{
 			ImgEntry entry = { 0 };
-			ReadFile(handle, &entry.offset, sizeof(entry.offset), NULL, NULL);
-			ReadFile(handle, &entry.size, sizeof(entry.size), NULL, NULL);
-			ReadFile(handle, entry.name, sizeof(entry.name), NULL, NULL);
+			ReadFile(handle, &entry.offset, sizeof(entry.offset), &readBytes, NULL);
+			ReadFile(handle, &entry.size, sizeof(entry.size), &readBytes, NULL);
+			ReadFile(handle, entry.name, sizeof(entry.name), &readBytes, NULL);
 			entries.push_back(entry);
 		}
 
@@ -77,10 +78,11 @@ public:
 	{
 		if (!isOpen()) return;
 
-		SCOPE_REMOVE_HOOKES
+		SCOPE_REMOVE_HOOKES;
 
+		DWORD readBytes = 0;
 		SetFilePointer(handle, offsetBytes, NULL, FILE_BEGIN);
-		ReadFile(handle, buf, sizeBytes, NULL, NULL);
+		ReadFile(handle, buf, sizeBytes, &readBytes, NULL);
 	}
 
 	std::vector<ImgEntry> getEntries()
