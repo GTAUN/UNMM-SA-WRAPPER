@@ -39,7 +39,7 @@ public:
 
 	~ImgReader() 
 	{
-		SCOPE_REMOVE_HOOKES
+		SCOPE_REMOVE_HOOKES;
 
 		if (handle != INVALID_HANDLE_VALUE) CloseHandle(handle);
 	}
@@ -48,7 +48,7 @@ public:
 	{
 		if (handle != INVALID_HANDLE_VALUE || filePath.empty()) return;
 
-		SCOPE_REMOVE_HOOKES
+		SCOPE_REMOVE_HOOKES;
 
 		handle = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
 		if (handle == INVALID_HANDLE_VALUE) return;

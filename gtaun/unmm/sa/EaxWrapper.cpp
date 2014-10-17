@@ -21,7 +21,7 @@
 #include <sstream>
 #include <fstream>
 
-#include <subhook.h>
+#include <gtaun/unmm/SimpleInlineHook.hpp>
 #include <gtaun/unmm/Utils.hpp>
 #include <gtaun/unmm/CoveringMapManager.hpp>
 #include <gtaun/unmm/archive/imgv2/ImgV2.hpp>
@@ -50,7 +50,7 @@ HANDLE WINAPI HookedCreateFileMappingA (HANDLE hFile, LPSECURITY_ATTRIBUTES lpFi
 HINSTANCE dllInstance = nullptr, originalDllInstance = nullptr;
 UINT_PTR procAddresses[7] = {0};
 
-SubHook createFileHook, closeHandleHook, readFileHook, readFileExHook, setFilePointerHook, createFileMappingHook;
+unmm::SimpleInlineHook createFileHook, closeHandleHook, readFileHook, readFileExHook, setFilePointerHook, createFileMappingHook;
 
 unordered_map<HANDLE, string> openedFilenames;
 unordered_map<HANDLE, DWORD> currentOffset;
@@ -91,23 +91,34 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
 		FreeLibrary(kernel32);
 
-		createFileHook.Install((void*) originalCreateFileA, (void*) HookedCreateFileA);
-		closeHandleHook.Install((void*) originalCloseHandle, (void*) HookedCloseHandle);
-		readFileHook.Install((void*) originalReadFile, (void*) HookedReadFile);
-		readFileExHook.Install((void*) originalReadFileEx, (void*) HookedReadFileEx);
-		setFilePointerHook.Install((void*) originalSetFilePointer, (void*) HookedSetFilePointer);
-		// createFileMappingHook.Install((void*) originalCreateFileMapping, (void*) HookedCreateFileMappingA);
+		createFileHook.init((void*)originalCreateFileA, (void*)HookedCreateFileA);
+		createFileHook.hook();
+
+		closeHandleHook.init((void*)originalCloseHandle, (void*)HookedCloseHandle);
+		closeHandleHook.hook();
+
+		readFileHook.init((void*)originalReadFile, (void*)HookedReadFile);
+		readFileHook.hook();
+
+		readFileExHook.init((void*)originalReadFileEx, (void*)HookedReadFileEx);
+		readFileExHook.hook();
+
+		setFilePointerHook.init((void*)originalSetFilePointer, (void*)HookedSetFilePointer);
+		setFilePointerHook.hook();
+
+		// createFileMappingHook.init((void*) originalCreateFileMapping, (void*) HookedCreateFileMappingA);
+		// createFileMappingHook.hook();
 
 		DeleteFile(UNMM_LOG_FILENAME);
 	}
 	else if (fdwReason == DLL_PROCESS_DETACH)
 	{
-		createFileHook.Remove();
-		closeHandleHook.Remove();
-		readFileHook.Remove();
-		readFileExHook.Remove();
-		setFilePointerHook.Remove();
-		// createFileMappingHook.Remove();
+		createFileHook.unhook();
+		closeHandleHook.unhook();
+		readFileHook.unhook();
+		readFileExHook.unhook();
+		setFilePointerHook.unhook();
+		// createFileMappingHook.unhook();
 
 		FreeLibrary(originalDllInstance);
 	}

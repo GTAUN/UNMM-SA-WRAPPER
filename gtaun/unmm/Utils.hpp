@@ -55,13 +55,13 @@ std::string& trim(std::string &s)
 } // namespace gtaun
 
 #define SCOPE_REMOVE_HOOKES \
-	SubHook::ScopedRemove createFileHookRemove(&createFileHook); \
-	SubHook::ScopedRemove closeHandleHookRemove(&closeHandleHook); \
-	SubHook::ScopedRemove readFileHookRemove(&readFileHook); \
-	SubHook::ScopedRemove readFileExHookRemove(&readFileExHook); \
-	SubHook::ScopedRemove setFilePointerHookRemove(&setFilePointerHook); \
-	SubHook::ScopedRemove createFileMappingHookRemove(&createFileMappingHook);
+	gtaun::unmm::SimpleInlineHook::ScopeUnhook createFileHookRemove(createFileHook); \
+	gtaun::unmm::SimpleInlineHook::ScopeUnhook closeHandleHookRemove(closeHandleHook); \
+	gtaun::unmm::SimpleInlineHook::ScopeUnhook readFileHookRemove(readFileHook); \
+	gtaun::unmm::SimpleInlineHook::ScopeUnhook readFileExHookRemove(readFileExHook); \
+	gtaun::unmm::SimpleInlineHook::ScopeUnhook setFilePointerHookRemove(setFilePointerHook); \
+	// gtaun::unmm::SimpleInlineHook::ScopeUnhook createFileMappingHookRemove(createFileMappingHook);
 
-extern SubHook createFileHook, closeHandleHook, readFileHook, readFileExHook, setFilePointerHook, createFileMappingHook;
+extern gtaun::unmm::SimpleInlineHook createFileHook, closeHandleHook, readFileHook, readFileExHook, setFilePointerHook, createFileMappingHook;
 
 #endif // GTAUN_UNMM_UTILS_UTILS_HPP

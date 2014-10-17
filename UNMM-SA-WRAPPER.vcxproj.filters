@@ -4,9 +4,6 @@
     <Filter Include="gtaun::unmm::sa">
       <UniqueIdentifier>{2a49da21-0cbf-4aeb-a375-cb695349fe23}</UniqueIdentifier>
     </Filter>
-    <Filter Include="subhook">
-      <UniqueIdentifier>{283ace97-7b9f-436e-b384-c6de2b6ed091}</UniqueIdentifier>
-    </Filter>
     <Filter Include="gtaun::unmm">
       <UniqueIdentifier>{8f258d37-0d36-4322-9460-c5bccf27a3bd}</UniqueIdentifier>
     </Filter>
@@ -21,14 +18,14 @@
     <ClCompile Include="gtaun\unmm\sa\SubhookStatic.cpp">
       <Filter>gtaun::unmm::sa</Filter>
     </ClCompile>
+    <ClCompile Include="gtaun\unmm\SimpleInlineHook.cpp">
+      <Filter>gtaun::unmm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="eax.def" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="subhook\subhook.h">
-      <Filter>subhook</Filter>
-    </ClInclude>
     <ClInclude Include="gtaun\unmm\CoveringMapManager.hpp">
       <Filter>gtaun::unmm</Filter>
     </ClInclude>
@@ -51,6 +48,12 @@
       <Filter>gtaun::unmm::archive::imgv2</Filter>
     </ClInclude>
     <ClInclude Include="gtaun\unmm\FileProcesser.hpp">
+      <Filter>gtaun::unmm</Filter>
+    </ClInclude>
+    <ClInclude Include="gtaun\unmm\SimpleInlineHook.hpp">
+      <Filter>gtaun::unmm</Filter>
+    </ClInclude>
+    <ClInclude Include="gtaun\unmm\SimpleAsm.hpp">
       <Filter>gtaun::unmm</Filter>
     </ClInclude>
   </ItemGroup>
