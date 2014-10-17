@@ -120,7 +120,7 @@ public:
 		}
 
 		fakeHeader = generateHeader(fakeEntries);
-		mapManager->registerCoveringBlock(0, ImgHeader::HEADER_SIZE, [&](void* buffer, size_t offset, size_t size, UINT_PTR) {
+		mapManager->registerCoveringBlock(0, ImgHeader::HEADER_SIZE, [&](void* buffer, size_t offset, size_t size) {
 			std::vector<byte> data(ImgHeader::HEADER_SIZE, 0);
 			memcpy(&data[0], &ImgHeader::VERSION_TAG, sizeof(ImgHeader::VERSION_TAG));
 			memcpy(&data[0 + sizeof(ImgHeader::VERSION_TAG)], &fakeHeader.fileEntries, sizeof(fakeHeader.fileEntries));
@@ -133,7 +133,7 @@ public:
 			size_t distance = it - fakeEntries.begin();
 			size_t offset = ImgHeader::HEADER_SIZE + distance * ImgEntry::ENTRY_SIZE;
 
-			mapManager->registerCoveringBlock(offset, ImgEntry::ENTRY_SIZE, [&](void* buffer, size_t offset, size_t size, UINT_PTR distance) {
+			mapManager->registerCoveringBlock(offset, ImgEntry::ENTRY_SIZE, [&, distance](void* buffer, size_t offset, size_t size) {
 				ImgEntry& entry = fakeEntries[distance];
 
 				std::vector<byte> data(ImgEntry::ENTRY_SIZE, 0);
@@ -142,45 +142,42 @@ public:
 				memcpy(&data[0 + sizeof(entry.fakeOffset) + sizeof(entry.size)], entry.name, sizeof(entry.name));
 
 				memcpy(buffer, &data[0 + offset], size);
-			}, distance);
+			});
 
 			if (std::find(coveredFileList.begin(), coveredFileList.end(), it->name) != coveredFileList.end())
 			{
-				mapManager->registerCoveringBlock(it->fakeOffset * ImgEntry::BLOCK_SIZE, it->size * ImgEntry::BLOCK_SIZE, [&](void* buffer, size_t offset, size_t size, UINT_PTR distance) {
+				mapManager->registerCoveringBlock(it->fakeOffset * ImgEntry::BLOCK_SIZE, it->size * ImgEntry::BLOCK_SIZE, [&, distance](void* buffer, size_t offset, size_t size) {
 					memset(buffer, 0, size);
 
 					ImgEntry& entry = fakeEntries[distance];
 					assert(size <= entry.getSizeBytes() - offset);
 					std::string fileFullPath = coveredDirPath + "\\" + entry.name;
 
-					SCOPE_REMOVE_HOOKES
+					SCOPE_REMOVE_HOOKES;
 
 					HANDLE handle = CreateFileA(fileFullPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
-					assert(handle != INVALID_HANDLE_VALUE);
 					if (handle != INVALID_HANDLE_VALUE)
 					{
 						SetFilePointer(handle, offset, NULL, FILE_BEGIN);
 						DWORD readBytes = 0;
 						ReadFile(handle, buffer, size, &readBytes, NULL);
 						CloseHandle(handle);
-
-						assert(readBytes == size);
 					}
-				}, distance);
+				});
 			}
 			else
 			{
-				mapManager->registerCoveringBlock(it->fakeOffset * ImgEntry::BLOCK_SIZE, it->size * ImgEntry::BLOCK_SIZE, [&](void* buffer, size_t offset, size_t size, UINT_PTR distance) {
+				mapManager->registerCoveringBlock(it->fakeOffset * ImgEntry::BLOCK_SIZE, it->size * ImgEntry::BLOCK_SIZE, [&, distance](void* buffer, size_t offset, size_t size) {
 					ImgEntry& entry = fakeEntries[distance];
 					assert(size <= entry.getSizeBytes() - offset);
 					reader->read(entry.getOffsetBytes() + offset, size, buffer);
-				}, distance);
+				});
 			}
 		}
 
 		if (sectionPaddingSizeBytes > sectionOriginalSizeBytes)
 		{
-			mapManager->registerCoveringBlock(sectionOriginalSizeBytes, sectionPaddingSizeBytes - sectionOriginalSizeBytes, [&](void* buffer, size_t offset, size_t size, UINT_PTR) {
+			mapManager->registerCoveringBlock(sectionOriginalSizeBytes, sectionPaddingSizeBytes - sectionOriginalSizeBytes, [&](void* buffer, size_t offset, size_t size) {
 				memset(buffer, 0, size);
 			});
 		}
