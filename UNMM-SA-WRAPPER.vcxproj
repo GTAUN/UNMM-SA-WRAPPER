@@ -42,7 +42,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <TargetName>eax</TargetName>
-    <IncludePath>.;subhook;$(IncludePath)</IncludePath>
+    <IncludePath>.;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -87,7 +87,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="gtaun\unmm\sa\EaxWrapper.cpp" />
-    <ClCompile Include="gtaun\unmm\sa\SubhookStatic.cpp" />
+    <ClCompile Include="gtaun\unmm\SimpleInlineHook.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="eax.def" />
@@ -100,11 +100,12 @@
     <ClInclude Include="gtaun\unmm\archive\imgv2\ImgV2.hpp" />
     <ClInclude Include="gtaun\unmm\CoveringMapManager.hpp" />
     <ClInclude Include="gtaun\unmm\FileProcesser.hpp" />
+    <ClInclude Include="gtaun\unmm\SimpleAsm.hpp" />
+    <ClInclude Include="gtaun\unmm\SimpleInlineHook.hpp" />
     <ClInclude Include="gtaun\unmm\Utils.hpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
       </ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="subhook\subhook.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
