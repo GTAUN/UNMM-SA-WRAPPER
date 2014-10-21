@@ -62,8 +62,8 @@ public:
 				}
 				
 			} while (FindNextFileA(iterator, &fileData));
+			FindClose(iterator);
 		}
-		FindClose(iterator);
 
 		mapManager = std::shared_ptr<CoveringMapManager>(new CoveringMapManager());
 		reader = std::shared_ptr<ImgReader>(new ImgReader());
@@ -124,7 +124,7 @@ public:
 			std::vector<byte> data(ImgHeader::HEADER_SIZE, 0);
 			memcpy(&data[0], &ImgHeader::VERSION_TAG, sizeof(ImgHeader::VERSION_TAG));
 			memcpy(&data[0 + sizeof(ImgHeader::VERSION_TAG)], &fakeHeader.fileEntries, sizeof(fakeHeader.fileEntries));
-
+			assert(offset + size <= data.size());
 			memcpy(buffer, &data[0 + offset], size);
 		});
 
@@ -140,14 +140,14 @@ public:
 				memcpy(&data[0], &entry.fakeOffset, sizeof(entry.fakeOffset));
 				memcpy(&data[0 + sizeof(entry.fakeOffset)], &entry.size, sizeof(entry.size));
 				memcpy(&data[0 + sizeof(entry.fakeOffset) + sizeof(entry.size)], entry.name, sizeof(entry.name));
-
+				assert(offset + size <= data.size());
 				memcpy(buffer, &data[0 + offset], size);
 			});
 
 			if (std::find(coveredFileList.begin(), coveredFileList.end(), it->name) != coveredFileList.end())
 			{
 				mapManager->registerCoveringBlock(it->fakeOffset * ImgEntry::BLOCK_SIZE, it->size * ImgEntry::BLOCK_SIZE, [&, distance](void* buffer, size_t offset, size_t size) {
-					memset(buffer, 0, size);
+					assert(distance < fakeEntries.size());
 
 					ImgEntry& entry = fakeEntries[distance];
 					assert(size <= entry.getSizeBytes() - offset);
@@ -168,6 +168,8 @@ public:
 			else
 			{
 				mapManager->registerCoveringBlock(it->fakeOffset * ImgEntry::BLOCK_SIZE, it->size * ImgEntry::BLOCK_SIZE, [&, distance](void* buffer, size_t offset, size_t size) {
+					assert(distance < fakeEntries.size());
+
 					ImgEntry& entry = fakeEntries[distance];
 					assert(size <= entry.getSizeBytes() - offset);
 					reader->read(entry.getOffsetBytes() + offset, size, buffer);
